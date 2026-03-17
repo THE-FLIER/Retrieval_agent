@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  retrieval-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: retrieval-agent
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+    environment:
+      # LLM Provider (OpenAI)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Optional: Anthropic API Key
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Elasticsearch Configuration
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_USER=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+      # LangSmith (optional)
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-retrieval-agent}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - retrieval-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - retrieval-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:-changeme} http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  elasticsearch_data:
+    driver: local
+
+networks:
+  retrieval-network:
+    driver: bridge
