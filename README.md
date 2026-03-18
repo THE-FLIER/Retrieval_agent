@@ -251,7 +251,7 @@ End setup instructions
 Once you've set up your retriever saved your model secrets, it's time to try it out! First, let's add some information to the index. Open studio, select the "indexer" graph from the dropdown in the top-left, provide an example user ID in the configuration at the bottom, and then add some content to chat over.
 
 ```json
-[{ "page_content": "My cat knows python." }]
+  [{ "page_content": "My cat knows python." }]
 ```
 
 When you upload content, it will be indexed under the configured user ID. You know it's complete when the indexer "delete"'s the content from its graph memory (since it's been persisted in your configured storage provider).
