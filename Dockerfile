@@ -5,23 +5,27 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Install uv package manager
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+# Install uv
+RUN pip install uv
 
 WORKDIR /app
 
 # Copy dependency files first for better caching
 COPY pyproject.toml uv.lock* ./
 
-# Create virtual environment and install dependencies
-RUN uv venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install -r pyproject.toml
+# Create virtual environment and install dependencies only (not the project itself)
+RUN uv sync --frozen --no-dev --no-install-project
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Install langgraph-cli for running the server
+RUN uv pip install "langgraph-cli[inmem]"
 
 # Copy source code and config
 COPY src/ ./src/
 COPY langgraph.json ./
+
+# Add src to PYTHONPATH so retrieval_graph module can be found
+ENV PYTHONPATH="/app/src"
 
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
@@ -34,4 +38,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8123/info || exit 1
 
 # Start LangGraph server
-CMD ["langgraph", "up", "--host", "0.0.0.0", "--port", "8123"]
+CMD ["langgraph", "dev", "--host", "0.0.0.0", "--port", "8123"]
