@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.12-slim
 
 # Install system dependencies
 RUN apt-get update && \
